@@ -1,8 +1,11 @@
 // Import the Firebase SDK
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, /*createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut*/ } from "firebase/auth"; // Import the auth module
+import { getAuth } from "firebase/auth"; // Import the auth module
 import { getFirestore } from "firebase/firestore"; // Import the Firestore module
+import firebase from 'firebase/compat/app';
+import * as firebaseui from 'firebaseui'
+import 'firebaseui/dist/firebaseui.css'
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -23,5 +26,19 @@ const analytics = getAnalytics(app);
 // Access Firebase services
 const db = getFirestore(app); // Get Firestore instance
 const auth = getAuth(app); // Get Authentication instance
+
+// Initialize the FirebaseUI Widget using Firebase.
+var ui = new firebaseui.auth.AuthUI(auth);
+
+// Configure FirebaseUI.
+var uiConfig = {
+  signInOptions: [
+    'password'
+  ],
+  // Other config options...
+};
+
+// Start FirebaseUI
+ui.start('#firebaseui-auth-container', uiConfig);
 
 // ... Your Firebase code here ...
