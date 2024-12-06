@@ -35,6 +35,7 @@ var uiConfig = {
   signInOptions: [
     'password'
   ],
+  signInSuccessUrl: '/dashboard.html'
   // Other config options...
 };
 
