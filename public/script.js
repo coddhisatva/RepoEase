@@ -1,7 +1,7 @@
 // Import the Firebase SDK
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import the auth module
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth"; // Import the auth module
 import { getFirestore } from "firebase/firestore"; // Import the Firestore module
 import * as firebaseui from 'firebaseui'
 import 'firebaseui/dist/firebaseui.css'
