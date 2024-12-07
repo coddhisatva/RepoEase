@@ -34,9 +34,8 @@ function initializeFirebaseUI() {
   // Configure FirebaseUI.
   const uiConfig = {
     signInOptions: [
-      'password' // Equivalent to firebaseui.auth.EmailAuthProvider.PROVIDER_ID
-      // Add other providers here if needed, e.g.,
-      // firebaseui.auth.GoogleAuthProvider.PROVIDER_ID
+      'password', // Equivalent to firebaseui.auth.EmailAuthProvider.PROVIDER_ID
+      'google.com'
     ],
     signInSuccessUrl: '/dashboard.html', // Redirect to dashboard after sign-in
     // Optional callbacks
