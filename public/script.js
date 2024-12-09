@@ -41,6 +41,7 @@ function initializeFirebaseUI() {
     // Optional callbacks
     callbacks: {
       signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+        console.log('User details:', authResult.user);
         // Return true to continue the redirect.
         return true;
       }
