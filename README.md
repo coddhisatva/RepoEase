@@ -26,3 +26,4 @@ I think we should change from FirebaseUI to Clerk, and use next.js (React framew
 
 Tailwind -- recd by Will
 ChadCm -- Ui component library recd by will
+InstantDb (to be aware of)-- database acts like a web socket (instantaneous updates), recd by Will -- cached locally
