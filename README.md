@@ -1,12 +1,18 @@
 # RepoEase
 Ease Repository 0.2
 
-To deploy website:
--locally:
-  npx webpack && http-server
--web hosting:
-  npx webpack && firebase deploy
+# For frontend (in first terminal):
+npx webpack --watch
 
+# In a second terminal, for local, run one of these:
+npx live-server public
+# or
+npx http-server public
+# or, for web hosting:
+firebase deploy
+
+# For backend (in a third terminal):
+node server/server.js
 
 Firebase UI Email Enumeration:
 -https://github.com/firebase/firebaseui-web/issues/1040

@@ -61,7 +61,15 @@ function initializeDashboard() {
       window.location.href = 'index.html';
     } else {
       console.log('User is signed in:', user);
-      // Optionally, display user info or perform other actions
+      
+      // Add event listener for Plaid Link button
+      const linkButton = document.getElementById('link-button');
+      if (linkButton) {
+        console.log('Link button found, adding click listener');
+        linkButton.addEventListener('click', initializePlaidLink);
+      } else {
+        console.error('Link button not found in the DOM');
+      }
     }
   });
 
@@ -87,4 +95,88 @@ if (document.getElementById('firebaseui-auth-container')) {
   initializeFirebaseUI();
 } else if (document.getElementById('sign-out-button')) {
   initializeDashboard();
+}
+
+// Function to create Link Token
+async function createLinkToken() {
+  try {
+    // Get current user ID from Firebase Auth
+    const user = auth.currentUser;
+    if (!user) {
+      console.error('No user is signed in');
+      return null;
+    }
+
+    const response = await fetch('http://localhost:3000/api/plaid/create_link_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user.uid }), // Use Firebase user ID
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log('Link token created successfully:', data);
+    return data.link_token;
+  } catch (error) {
+    console.error('Error creating link token:', error);
+    return null;
+  }
+}
+
+// Function to initialize Plaid Link
+async function initializePlaidLink() {
+  console.log('Initializing Plaid Link...');
+  const linkToken = await createLinkToken();
+  if (!linkToken) {
+    console.error('Failed to create link token');
+    alert('Failed to create link token');
+    return;
+  }
+
+  // Verify Plaid is available
+  if (!window.Plaid) {
+    console.error('Plaid script is not loaded');
+    return;
+  }
+
+  const handler = Plaid.create({
+    token: linkToken,
+    onSuccess: async (public_token, metadata) => {
+      console.log('Plaid Link success:', metadata);
+      try {
+        const exchangeResponse = await fetch('http://localhost:3000/api/plaid/exchange_public_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ public_token }),
+        });
+
+        if (!exchangeResponse.ok) {
+          throw new Error(`HTTP error! status: ${exchangeResponse.status}`);
+        }
+
+        const exchangeData = await exchangeResponse.json();
+        console.log('Access Token received successfully');
+      } catch (error) {
+        console.error('Error exchanging public token:', error);
+        alert('Error connecting to bank. Please try again.');
+      }
+    },
+    onExit: (err, metadata) => {
+      if (err != null) {
+        console.error('Error during Plaid Link:', err);
+      }
+      console.log('Plaid Link exit:', metadata);
+    },
+    onLoad: () => {
+      console.log('Plaid Link loaded');
+    },
+    onEvent: (eventName, metadata) => {
+      console.log('Plaid Link event:', eventName, metadata);
+    },
+  });
+
+  console.log('Opening Plaid Link...');
+  handler.open();
 }

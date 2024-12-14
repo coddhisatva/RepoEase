@@ -1,12 +1,12 @@
 const path = require('path');
 
 module.exports = {
-  entry: './public/script.js', // Your main JavaScript file
+  entry: './public/script.js',
   output: {
-    filename: 'bundle.js', // Output filename
-    path: path.resolve(__dirname, 'public/dist') // Output directory
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'public/dist')
   },
-  mode: 'development', // or 'production'
+  mode: 'development',
   module: {
     rules: [
       {
@@ -16,4 +16,3 @@ module.exports = {
     ]
   }
 };
-

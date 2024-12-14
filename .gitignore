@@ -2,3 +2,4 @@ node_modules/
 .firebase/
 .DS_Store
 public/dist/bundle.js
+.env
