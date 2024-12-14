@@ -21,3 +21,5 @@ Firebase UI Email Enumeration:
 --No fix as of now, >1year later. Have they abandoned FirebaseUI?
 It would be advantageous to get to know someone on a Firebase team.
 -headquarters: 22 4th Street, San Francisco.
+
+I think we should change from FirebaseUI to Clerk, and use next.js (React framework).

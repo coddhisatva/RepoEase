@@ -46,12 +46,16 @@ router.post('/create_link_token', async (req, res) => {
   
   // Endpoint to exchange Public Token for Access Token
   router.post('/exchange_public_token', async (req, res) => {
+	const plaidClient = getPlaidClient();
 	const { public_token } = req.body;
   
 	try {
-	  const response = await client.exchangePublicToken(public_token);
-	  const access_token = response.access_token;
-	  const item_id = response.item_id;
+	  const response = await plaidClient.itemPublicTokenExchange({
+		public_token: public_token
+	  });
+	  
+	  const access_token = response.data.access_token;
+	  const item_id = response.data.item_id;
   
 	  // TODO: Store access_token and item_id securely in your database
 	  // Example:
@@ -60,7 +64,10 @@ router.post('/create_link_token', async (req, res) => {
 	  res.json({ access_token, item_id });
 	} catch (error) {
 	  console.error('Error exchanging public token:', error);
-	  res.status(500).json({ error: 'Failed to exchange public token' });
+	  res.status(500).json({ 
+		error: 'Failed to exchange public token',
+		details: error.message 
+	  });
 	}
   });
   
