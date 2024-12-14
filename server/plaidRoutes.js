@@ -67,9 +67,18 @@ function getPlaidClient() {
 
 // Endpoint to create a Link Token
 router.post('/create_link_token', async (req, res) => {
-    const plaidClient = getPlaidClient();
     const { user_id } = req.body;
     
+    // Input validation
+    if (!user_id) {
+        console.error('Missing user_id in request');
+        return res.status(400).json({ 
+            error: 'Missing user_id in request body'
+        });
+    }
+
+    const plaidClient = getPlaidClient();
+
     try {
         const response = await plaidClient.linkTokenCreate({
             user: { client_user_id: user_id },
@@ -79,11 +88,22 @@ router.post('/create_link_token', async (req, res) => {
             language: 'en',
         });
         
-        console.log('Plaid response:', response);
+        // Validate response
+        if (!response.data.link_token) {
+            console.error('No link token in Plaid response');
+            return res.status(500).json({ 
+                error: 'Invalid response from Plaid'
+            });
+        }
+        
+        console.log('Link token created successfully for user:', user_id);
         res.json({ link_token: response.data.link_token });
     } catch (error) {
         console.error('Error creating link token:', error);
-        res.status(500).json({ error: 'Unable to create link token' });
+        res.status(500).json({ 
+            error: 'Unable to create link token',
+            details: error.message
+        });
     }
 });
   
