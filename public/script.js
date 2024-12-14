@@ -187,3 +187,28 @@ async function initializePlaidLink() {
   console.log('Opening Plaid Link...');
   handler.open();
 }
+
+async function fetchTransactions() {
+    try {
+        const response = await fetch('/api/plaid/fetch_transactions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                userId: auth.currentUser.uid
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch transactions');
+        }
+
+        const data = await response.json();
+        console.log('Transactions:', data.transactions);
+        return data.transactions;
+    } catch (error) {
+        console.error('Error:', error);
+        throw error;
+    }
+}

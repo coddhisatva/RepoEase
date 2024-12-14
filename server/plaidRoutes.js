@@ -203,6 +203,58 @@ router.post('/create_link_token', async (req, res) => {
         }));
         console.log('Connected accounts with purposes:', purposes);
 
+        // After successfully storing the plaidItem, fetch initial transactions
+        try {
+            const sourceAccounts = accounts
+                .filter(account => 
+                    account.type === 'depository' || account.type === 'credit'
+                )
+                .map(account => account.account_id);
+
+            if (sourceAccounts.length > 0) {
+                // Get transactions for the last 30 days
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                
+                const transactionsResponse = await plaidClient.transactionsGet({
+                    access_token: access_token,
+                    start_date: startDate.toISOString().split('T')[0],
+                    end_date: new Date().toISOString().split('T')[0],
+                    options: {
+                        account_ids: sourceAccounts
+                    }
+                });
+
+                // Store transactions in Firestore
+                const batch = admin.firestore().batch();
+                const transactionsRef = admin.firestore()
+                    .collection('users')
+                    .doc(userId)
+                    .collection('transactions');
+
+                transactionsResponse.data.transactions.forEach(transaction => {
+                    const docRef = transactionsRef.doc();
+                    batch.set(docRef, {
+                        plaid_transaction_id: transaction.transaction_id,
+                        account_id: transaction.account_id,
+                        amount: transaction.amount,
+                        date: transaction.date,
+                        name: transaction.name,
+                        pending: transaction.pending,
+                        created_at: admin.firestore.FieldValue.serverTimestamp(),
+                        round_up_amount: Math.ceil(transaction.amount) - transaction.amount,
+                        round_up_status: 'pending'  // pending, processed, or failed
+                    });
+                });
+
+                await batch.commit();
+                console.log('Initial transactions stored');
+            }
+        } catch (transactionError) {
+            console.error('Error fetching initial transactions:', transactionError);
+            // Don't fail the whole connection if transaction fetch fails
+        }
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error in exchange_public_token:', error);
@@ -211,6 +263,72 @@ router.post('/create_link_token', async (req, res) => {
             details: error.message 
         });
     }
+  });
+  
+  // Endpoint to fetch transactions
+  router.post('/fetch_transactions', async (req, res) => {
+    const { userId } = req.body;
+    const plaidClient = getPlaidClient();
+
+    try {
+        // Get all active plaidItems for this user
+        const plaidItemsSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .where('status', '==', 'active')
+            .get();
+
+        const allTransactions = [];
+
+        // For each plaidItem, get transactions from source accounts
+        for (const doc of plaidItemsSnapshot.docs) {
+            const plaidItem = doc.data();
+            const sourceAccounts = plaidItem.accountDetails
+                .filter(account => account.purpose === 'source')
+                .map(account => account.id);
+
+            if (sourceAccounts.length > 0) {
+                // Decrypt access token
+                const decryptedToken = decrypt(plaidItem.encrypted_access_token);
+
+                // Get transactions for the last 7 days
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 7);
+                
+                const response = await plaidClient.transactionsGet({
+                    access_token: decryptedToken,
+                    start_date: startDate.toISOString().split('T')[0],
+                    end_date: new Date().toISOString().split('T')[0],
+                    options: {
+                        account_ids: sourceAccounts
+                    }
+                });
+
+                allTransactions.push(...response.data.transactions);
+            }
+        }
+
+        res.json({ transactions: allTransactions });
+    } catch (error) {
+        console.error('Error fetching transactions:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch transactions',
+            details: error.message 
+        });
+    }
+  });
+  
+  // Endpoint to handle webhook notifications
+  router.post('/webhook', async (req, res) => {
+    const { webhook_type, webhook_code, item_id } = req.body;
+
+    if (webhook_type === 'TRANSACTIONS' && webhook_code === 'DEFAULT_UPDATE') {
+        // Handle new transactions
+        // We'll implement this next
+    }
+
+    res.sendStatus(200);
   });
   
   // Export the router
