@@ -141,23 +141,30 @@ async function initializePlaidLink() {
     return;
   }
 
+  console.log('Current user ID:', auth.currentUser.uid);
+
   const handler = Plaid.create({
     token: linkToken,
     onSuccess: async (public_token, metadata) => {
       console.log('Plaid Link success:', metadata);
       try {
-        const exchangeResponse = await fetch('http://localhost:3000/api/plaid/exchange_public_token', {
+        const response = await fetch('http://localhost:3000/api/plaid/exchange_public_token', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ public_token }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            public_token: public_token,
+            userId: auth.currentUser.uid,
+            institution_id: metadata.institution.institution_id
+          }),
         });
 
-        if (!exchangeResponse.ok) {
-          throw new Error(`HTTP error! status: ${exchangeResponse.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        const exchangeData = await exchangeResponse.json();
-        console.log('Access Token received successfully');
+        
+        console.log('Access Token stored successfully');
       } catch (error) {
         console.error('Error exchanging public token:', error);
         alert('Error connecting to bank. Please try again.');

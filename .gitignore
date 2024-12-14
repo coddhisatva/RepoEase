@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 public/dist/bundle.js
 .env
+server/firebase-service-account.json

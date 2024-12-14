@@ -27,3 +27,11 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Backend server is running on port ${PORT}`);
 });
+
+const admin = require('firebase-admin');
+const serviceAccount = require('./firebase-service-account.json');
+
+// Initialize Firebase Admin
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});

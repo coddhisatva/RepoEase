@@ -23,3 +23,6 @@ It would be advantageous to get to know someone on a Firebase team.
 -headquarters: 22 4th Street, San Francisco.
 
 I think we should change from FirebaseUI to Clerk, and use next.js (React framework).
+
+Tailwind -- recd by Will
+ChadCm -- Ui component library recd by will
