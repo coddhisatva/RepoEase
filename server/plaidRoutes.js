@@ -69,7 +69,6 @@ function getPlaidClient() {
 router.post('/create_link_token', async (req, res) => {
     const { user_id } = req.body;
     
-    // Input validation
     if (!user_id) {
         console.error('Missing user_id in request');
         return res.status(400).json({ 
@@ -83,12 +82,12 @@ router.post('/create_link_token', async (req, res) => {
         const response = await plaidClient.linkTokenCreate({
             user: { client_user_id: user_id },
             client_name: 'Ease.Cash',
-            products: ['transactions', 'liabilities'],
+            products: ['transactions'],           // Required product
+            optional_products: ['liabilities'],   // Optional product
             country_codes: ['US'],
             language: 'en',
         });
         
-        // Validate response
         if (!response.data.link_token) {
             console.error('No link token in Plaid response');
             return res.status(500).json({ 
@@ -122,50 +121,89 @@ router.post('/create_link_token', async (req, res) => {
     }
 
     try {
-        const response = await plaidClient.itemPublicTokenExchange({
+        // Exchange public token
+        const exchangeResponse = await plaidClient.itemPublicTokenExchange({
             public_token: public_token
         });
         
-        const access_token = response.data.access_token;
-        const item_id = response.data.item_id;
+        const access_token = exchangeResponse.data.access_token;
+        const item_id = exchangeResponse.data.item_id;
 
-        if (!access_token || !item_id) {
-            console.error('Invalid response from Plaid token exchange');
-            return res.status(500).json({ 
-                error: 'Invalid response from Plaid'
+        // Get account details
+        const accountsResponse = await plaidClient.accountsGet({
+            access_token: access_token
+        });
+        
+        const accounts = accountsResponse.data.accounts;
+
+        // Check for existing connections with these accounts
+        const existingConnections = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .where('status', '==', 'active')
+            .where('institution_id', '==', institution_id)
+            .get();
+
+        let hasDuplicate = false;
+        existingConnections.forEach(doc => {
+            const data = doc.data();
+            if (data.accountDetails) {
+                // Check for same account types/subtypes instead of IDs
+                const existingTypes = data.accountDetails.map(a => `${a.type}-${a.subtype}`);
+                const newTypes = accounts.map(a => `${a.type}-${a.subtype}`);
+                
+                const hasOverlap = existingTypes.some(type => newTypes.includes(type));
+                if (hasOverlap) {
+                    hasDuplicate = true;
+                }
+            }
+        });
+
+        if (hasDuplicate) {
+            return res.status(400).json({
+                error: 'Duplicate connection',
+                details: 'One or more accounts are already connected'
             });
         }
 
-        console.log('Got access token:', access_token);
-        console.log('Attempting to store in Firestore for user:', userId);
-
-        try {
-            // Encrypt the access token
-            const encryptedToken = encrypt(access_token);
-
-            // Store encrypted token in Firebase
-            await admin.firestore()
-                .collection('users')
-                .doc(userId)
-                .collection('plaidItems')
-                .doc(item_id)
-                .set({
-                    encrypted_access_token: encryptedToken,
-                    item_id: item_id,
-                    institution_id: institution_id,
-                    created_at: admin.firestore.FieldValue.serverTimestamp(),
-                    status: 'active'  // Add a status field
-                });
-
-            console.log('Successfully stored encrypted token in Firestore');
-            res.json({ success: true });
-        } catch (storageError) {
-            console.error('Error storing access token:', storageError);
-            res.status(500).json({ 
-                error: 'Failed to store access token',
-                details: 'Database operation failed'
+        // Store new connection with account details and purposes
+        const encryptedToken = encrypt(access_token);
+        await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .doc(item_id)
+            .set({
+                encrypted_access_token: encryptedToken,
+                item_id: item_id,
+                institution_id: institution_id,
+                accountDetails: accounts.map(a => ({
+                    id: a.account_id,
+                    name: a.name,
+                    type: a.type,
+                    subtype: a.subtype,
+                    mask: a.mask,
+                    purpose: (a.type === 'loan' && a.subtype === 'student') 
+                        ? 'destination'  // Only student loans are destinations
+                        : 'source'      // Everything else is a source for round-ups
+                })),
+                created_at: admin.firestore.FieldValue.serverTimestamp(),
+                last_updated: admin.firestore.FieldValue.serverTimestamp(),
+                status: 'active'
             });
-        }
+
+        // Log the types of accounts connected
+        const purposes = accounts.map(a => ({
+            type: a.type,
+            subtype: a.subtype,
+            purpose: (a.type === 'loan' && a.subtype === 'student') 
+                ? 'destination' 
+                : 'source'
+        }));
+        console.log('Connected accounts with purposes:', purposes);
+
+        res.json({ success: true });
     } catch (error) {
         console.error('Error in exchange_public_token:', error);
         res.status(500).json({ 

@@ -27,3 +27,30 @@ I think we should change from FirebaseUI to Clerk, and use next.js (React framew
 Tailwind -- recd by Will
 ChadCm -- Ui component library recd by will
 InstantDb (to be aware of)-- database acts like a web socket (instantaneous updates), recd by Will -- cached locally
+
+## Bank Account Linking
+
+### Behavior
+- Users can link multiple bank accounts through Plaid
+- Each connection can include checking accounts, credit cards, and/or student loan accounts, etc
+- Student loan accounts are tagged as 'destination' (for payments)
+- All else are tagged as 'source' (for round-ups)
+- Users can:
+  - Connect multiple accounts from the same bank
+  - Connect accounts from different banks
+  - Add student loan accounts at any time (not required immediately)
+
+### Duplicate Prevention
+- Cannot link the same account type from the same institution twice
+- Can link different account types from the same institution
+- Can link same account types from different institutions
+
+### Data Storage
+Each connection is stored in Firestore with:
+- Encrypted access token
+- Institution ID
+- Account details including:
+  - Account IDs
+  - Account types
+  - Account purposes (source/destination)
+  - Account masks (last 4 digits)
