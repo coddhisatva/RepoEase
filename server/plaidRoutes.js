@@ -110,10 +110,17 @@ router.post('/create_link_token', async (req, res) => {
   // Endpoint to exchange Public Token for Access Token
   router.post('/exchange_public_token', async (req, res) => {
     const plaidClient = getPlaidClient();
-    const { public_token, userId } = req.body;
+    const { public_token, userId, institution_id } = req.body;
     
-    console.log('Received request with userId:', userId); // Debug log
-  
+    // Input validation
+    if (!public_token || !userId) {
+        console.error('Missing required fields in request');
+        return res.status(400).json({ 
+            error: 'Missing required fields',
+            details: 'public_token and userId are required'
+        });
+    }
+
     try {
         const response = await plaidClient.itemPublicTokenExchange({
             public_token: public_token
@@ -122,29 +129,45 @@ router.post('/create_link_token', async (req, res) => {
         const access_token = response.data.access_token;
         const item_id = response.data.item_id;
 
-        console.log('Got access token:', access_token); // Debug log
-        console.log('Attempting to store in Firestore for user:', userId); // Debug log
-
-        // Encrypt the access token
-        const encryptedToken = encrypt(access_token);
-
-        // Store encrypted token in Firebase
-        await admin.firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('plaidItems')
-            .doc(item_id)
-            .set({
-                encrypted_access_token: encryptedToken,
-                item_id: item_id,
-                institution_id: req.body.institution_id,
-                created_at: admin.firestore.FieldValue.serverTimestamp()
+        if (!access_token || !item_id) {
+            console.error('Invalid response from Plaid token exchange');
+            return res.status(500).json({ 
+                error: 'Invalid response from Plaid'
             });
+        }
 
-        console.log('Successfully stored encrypted token in Firestore'); // Debug log
-        res.json({ success: true });
+        console.log('Got access token:', access_token);
+        console.log('Attempting to store in Firestore for user:', userId);
+
+        try {
+            // Encrypt the access token
+            const encryptedToken = encrypt(access_token);
+
+            // Store encrypted token in Firebase
+            await admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('plaidItems')
+                .doc(item_id)
+                .set({
+                    encrypted_access_token: encryptedToken,
+                    item_id: item_id,
+                    institution_id: institution_id,
+                    created_at: admin.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'  // Add a status field
+                });
+
+            console.log('Successfully stored encrypted token in Firestore');
+            res.json({ success: true });
+        } catch (storageError) {
+            console.error('Error storing access token:', storageError);
+            res.status(500).json({ 
+                error: 'Failed to store access token',
+                details: 'Database operation failed'
+            });
+        }
     } catch (error) {
-        console.error('Error in exchange_public_token:', error); // More detailed error log
+        console.error('Error in exchange_public_token:', error);
         res.status(500).json({ 
             error: 'Failed to exchange public token',
             details: error.message 
