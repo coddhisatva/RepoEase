@@ -87,6 +87,29 @@ function initializeDashboard() {
     });
   }
 
+  // Add webhook test button handler
+  const testWebhookButton = document.getElementById('test-webhook-button');
+  if (testWebhookButton) {
+    console.log('Test webhook button found, adding click listener');
+    testWebhookButton.addEventListener('click', async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/plaid/simulate_webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            item_id: 'test_item_id'
+          })
+        });
+        const data = await response.json();
+        console.log('Webhook simulation response:', data);
+      } catch (error) {
+        console.error('Error testing webhook:', error);
+      }
+    });
+  }
+
   console.log('Dashboard script loaded. User should be signed in if they’re here.');
 }
 

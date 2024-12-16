@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 const plaidRoutes = require('./plaidRoutes');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const envPath = path.join(__dirname, '..', '.env');
+console.log('Looking for .env at:', envPath);
+require('dotenv').config({ path: envPath });
 console.log('Env test:', process.env.PLAID_CLIENT_ID);
 
 const app = express();

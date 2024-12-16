@@ -331,5 +331,44 @@ router.post('/create_link_token', async (req, res) => {
     res.sendStatus(200);
   });
   
+  // Add this endpoint to plaidRoutes.js
+  router.post('/simulate_webhook', async (req, res) => {
+    console.log('Received webhook simulation request');
+    
+    try {
+        // Create a mock webhook payload
+        const mockWebhookPayload = {
+            webhook_type: 'TRANSACTIONS',
+            webhook_code: 'DEFAULT_UPDATE',
+            item_id: req.body.item_id,
+            new_transactions: 3,
+            timestamp: new Date().toISOString()
+        };
+
+        // Log the mock webhook
+        console.log('Processing simulated webhook:', mockWebhookPayload);
+
+        // Handle the webhook payload directly here
+        if (mockWebhookPayload.webhook_type === 'TRANSACTIONS' && 
+            mockWebhookPayload.webhook_code === 'DEFAULT_UPDATE') {
+            // Add your transaction processing logic here
+            console.log('Processing simulated transaction webhook');
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Webhook simulated successfully',
+            payload: mockWebhookPayload
+        });
+
+    } catch (error) {
+        console.error('Error simulating webhook:', error);
+        res.status(500).json({ 
+            error: 'Failed to simulate webhook',
+            details: error.message 
+        });
+    }
+  });
+  
   // Export the router
   module.exports = router;
