@@ -10,9 +10,6 @@ let client;
 // Encryption helper functions
 function encrypt(text) {
     try {
-        // Debug log
-        console.log('Encryption key length:', Buffer.from(process.env.ENCRYPTION_KEY, 'base64').length);
-        
         const key = Buffer.from(process.env.ENCRYPTION_KEY, 'base64');
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
@@ -34,9 +31,10 @@ function encrypt(text) {
 }
 
 function decrypt(encrypted) {
+    const key = Buffer.from(process.env.ENCRYPTION_KEY, 'base64');
     const decipher = crypto.createDecipheriv(
         'aes-256-gcm', 
-        Buffer.from(process.env.ENCRYPTION_KEY),
+        key,
         Buffer.from(encrypted.iv, 'hex')
     );
     
@@ -326,14 +324,13 @@ router.post('/create_link_token', async (req, res) => {
 
     try {
         if (webhook_type === 'TRANSACTIONS' && webhook_code === 'DEFAULT_UPDATE') {
-            // Use collectionGroup to search across all plaidItems subcollections
+            // Find plaidItem
             const plaidItemsQuery = await admin.firestore()
                 .collectionGroup('plaidItems')
                 .where('item_id', '==', item_id)
                 .get();
 
             if (plaidItemsQuery.empty) {
-                console.log('No plaidItem found with id:', item_id);
                 return res.status(404).json({ 
                     error: 'Plaid item not found',
                     item_id: item_id
@@ -344,12 +341,49 @@ router.post('/create_link_token', async (req, res) => {
             const userId = plaidItemDoc.ref.parent.parent.id;
             const plaidItem = plaidItemDoc.data();
 
-            console.log('Found plaidItem for user:', userId);
+            // Debug log the encrypted token
+            console.log('Encrypted token structure:', plaidItem.encrypted_access_token);
+
+            // Get transactions from Plaid
+            const plaidClient = getPlaidClient();
+            const transactionsResponse = await plaidClient.transactionsGet({
+                access_token: decrypt(plaidItem.encrypted_access_token),
+                start_date: '2024-01-01',
+                end_date: new Date().toISOString().split('T')[0]
+            });
+
+            // Store transactions in Firestore
+            const batch = admin.firestore().batch();
+            const transactionsRef = admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('transactions');
+
+            for (const transaction of transactionsResponse.data.transactions) {
+                if (!transaction.pending) {
+                    const roundUpAmount = Math.ceil(transaction.amount) - transaction.amount;
+                    
+                    const docRef = transactionsRef.doc(transaction.transaction_id);
+                    batch.set(docRef, {
+                        plaid_transaction_id: transaction.transaction_id,
+                        account_id: transaction.account_id,
+                        amount: transaction.amount,
+                        date: transaction.date,
+                        name: transaction.name,
+                        round_up_amount: roundUpAmount,
+                        round_up_status: 'pending',
+                        created_at: admin.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                }
+            }
+
+            await batch.commit();
+            console.log(`Stored ${transactionsResponse.data.transactions.length} transactions`);
 
             return res.json({ 
                 success: true, 
-                message: 'Found plaidItem',
-                userId: userId
+                message: 'Processed new transactions',
+                count: transactionsResponse.data.transactions.length
             });
         }
         
