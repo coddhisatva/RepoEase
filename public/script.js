@@ -110,6 +110,23 @@ function initializeDashboard() {
     });
   }
 
+  // Add process roundups button handler
+  const processRoundupsButton = document.getElementById('processRoundups');
+  if (processRoundupsButton) {
+    console.log('Process roundups button found, adding click listener');
+    processRoundupsButton.addEventListener('click', async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/plaid/process_daily_roundups', {
+          method: 'POST'
+        });
+        const data = await response.json();
+        console.log('Daily roundups response:', data);
+      } catch (error) {
+        console.error('Error processing daily round-ups:', error);
+      }
+    });
+  }
+
   console.log('Dashboard script loaded. User should be signed in if they’re here.');
 }
 
