@@ -8,7 +8,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '..', '.env');
 console.log('Looking for .env at:', envPath);
 require('dotenv').config({ path: envPath });
-console.log('Env test:', process.env.PLAID_CLIENT_ID);
+console.log('Env test - Stripe key:', process.env.STRIPE_SECRET_KEY ? 'exists' : 'missing');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

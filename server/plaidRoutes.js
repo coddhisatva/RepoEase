@@ -4,6 +4,22 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 
+let stripe;
+
+// Initialize after router is created
+router.use((req, res, next) => {
+    if (!stripe) {
+        console.log('Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY ? 'exists' : 'missing');
+        stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        
+        // Test Stripe connection
+        stripe.customers.list({ limit: 1 })
+            .then(() => console.log('Stripe connection successful'))
+            .catch(error => console.error('Stripe connection error:', error));
+    }
+    next();
+});
+
 // Add this line to declare the client variable
 let client;
 
@@ -201,6 +217,26 @@ router.post('/create_link_token', async (req, res) => {
         }));
         console.log('Connected accounts with purposes:', purposes);
 
+        // Create Stripe customer
+        const stripeCustomer = await stripe.customers.create({
+            metadata: {
+                userId: userId,
+                plaid_item_id: item_id
+            }
+        });
+
+        // Update plaidItem with Stripe customer ID
+        await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .doc(item_id)
+            .update({
+                stripe_customer_id: stripeCustomer.id
+            });
+
+        console.log('Created Stripe customer:', stripeCustomer.id);
+
         // After successfully storing the plaidItem, fetch initial transactions
         try {
             const sourceAccounts = accounts
@@ -230,23 +266,29 @@ router.post('/create_link_token', async (req, res) => {
                     .doc(userId)
                     .collection('transactions');
 
-                transactionsResponse.data.transactions.forEach(transaction => {
-                    const docRef = transactionsRef.doc();
-                    batch.set(docRef, {
-                        plaid_transaction_id: transaction.transaction_id,
-                        account_id: transaction.account_id,
-                        amount: transaction.amount,
-                        date: transaction.date,
-                        name: transaction.name,
-                        pending: transaction.pending,
-                        created_at: admin.firestore.FieldValue.serverTimestamp(),
-                        round_up_amount: Math.ceil(transaction.amount) - transaction.amount,
-                        round_up_status: 'pending'  // pending, processed, or failed
-                    });
-                });
+                for (const transaction of transactionsResponse.data.transactions) {
+                    if (!transaction.pending) {
+                        // Calculate round-up (only for positive amounts)
+                        const roundUpAmount = transaction.amount > 0 
+                            ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
+                            : 0;
+
+                        const docRef = transactionsRef.doc(transaction.transaction_id);
+                        batch.set(docRef, {
+                            plaid_transaction_id: transaction.transaction_id,
+                            account_id: transaction.account_id,
+                            amount: transaction.amount,
+                            date: transaction.date,
+                            name: transaction.name,
+                            round_up_amount: roundUpAmount,
+                            round_up_status: roundUpAmount > 0 ? 'pending' : 'na',
+                            created_at: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                }
 
                 await batch.commit();
-                console.log('Initial transactions stored');
+                console.log(`Stored ${transactionsResponse.data.transactions.length} initial transactions`);
             }
         } catch (transactionError) {
             console.error('Error fetching initial transactions:', transactionError);
@@ -361,11 +403,32 @@ router.post('/create_link_token', async (req, res) => {
 
             for (const transaction of transactionsResponse.data.transactions) {
                 if (!transaction.pending) {
-                    // Only process positive transactions
+                    // Calculate round-up
                     const roundUpAmount = transaction.amount > 0 
                         ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
                         : 0;
                     
+                    let stripeAuthId = null;
+                    
+                    // Only create auth if there's a round-up amount
+                    if (roundUpAmount > 0) {
+                        try {
+                            // Create Stripe authorization hold
+                            const auth = await stripe.paymentIntents.create({
+                                amount: Math.round(roundUpAmount * 100), // Convert to cents
+                                currency: 'usd',
+                                customer: plaidItem.stripe_customer_id, // We'll need this from earlier setup
+                                capture_method: 'manual',
+                                description: `Round-up hold for ${transaction.name}`
+                            });
+                            stripeAuthId = auth.id;
+                            console.log(`Created auth hold: ${stripeAuthId} for $${roundUpAmount}`);
+                        } catch (stripeError) {
+                            console.error('Stripe auth error:', stripeError);
+                            // Continue processing other transactions
+                        }
+                    }
+
                     const docRef = transactionsRef.doc(transaction.transaction_id);
                     batch.set(docRef, {
                         plaid_transaction_id: transaction.transaction_id,
@@ -374,7 +437,8 @@ router.post('/create_link_token', async (req, res) => {
                         date: transaction.date,
                         name: transaction.name,
                         round_up_amount: roundUpAmount,
-                        round_up_status: transaction.amount > 0 ? 'pending' : 'na',
+                        round_up_status: roundUpAmount > 0 ? 'pending' : 'na',
+                        stripe_auth_id: stripeAuthId,
                         created_at: admin.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
                 }
