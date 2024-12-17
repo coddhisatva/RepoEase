@@ -319,19 +319,56 @@ router.post('/create_link_token', async (req, res) => {
     }
   });
   
-  // Endpoint to handle webhook notifications
-  router.post('/webhook', async (req, res) => {
+  // Create a function for the webhook handler logic
+  async function handleWebhook(req, res) {
     const { webhook_type, webhook_code, item_id } = req.body;
+    console.log('Webhook handler started:', { webhook_type, webhook_code, item_id });
 
-    if (webhook_type === 'TRANSACTIONS' && webhook_code === 'DEFAULT_UPDATE') {
-        // Handle new transactions
-        // We'll implement this next
+    try {
+        if (webhook_type === 'TRANSACTIONS' && webhook_code === 'DEFAULT_UPDATE') {
+            // Use collectionGroup to search across all plaidItems subcollections
+            const plaidItemsQuery = await admin.firestore()
+                .collectionGroup('plaidItems')
+                .where('item_id', '==', item_id)
+                .get();
+
+            if (plaidItemsQuery.empty) {
+                console.log('No plaidItem found with id:', item_id);
+                return res.status(404).json({ 
+                    error: 'Plaid item not found',
+                    item_id: item_id
+                });
+            }
+
+            const plaidItemDoc = plaidItemsQuery.docs[0];
+            const userId = plaidItemDoc.ref.parent.parent.id;
+            const plaidItem = plaidItemDoc.data();
+
+            console.log('Found plaidItem for user:', userId);
+
+            return res.json({ 
+                success: true, 
+                message: 'Found plaidItem',
+                userId: userId
+            });
+        }
+        
+        return res.json({ 
+            success: true, 
+            message: 'Webhook type not handled' 
+        });
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        return res.status(500).json({ 
+            error: 'Failed to process webhook',
+            details: error.message 
+        });
     }
+  }
 
-    res.sendStatus(200);
-  });
-  
-  // Add this endpoint to plaidRoutes.js
+  // Use the handler in both routes
+  router.post('/webhook', handleWebhook);
+
   router.post('/simulate_webhook', async (req, res) => {
     console.log('Received webhook simulation request');
     
@@ -345,21 +382,9 @@ router.post('/create_link_token', async (req, res) => {
             timestamp: new Date().toISOString()
         };
 
-        // Log the mock webhook
-        console.log('Processing simulated webhook:', mockWebhookPayload);
-
-        // Handle the webhook payload directly here
-        if (mockWebhookPayload.webhook_type === 'TRANSACTIONS' && 
-            mockWebhookPayload.webhook_code === 'DEFAULT_UPDATE') {
-            // Add your transaction processing logic here
-            console.log('Processing simulated transaction webhook');
-        }
-
-        res.json({ 
-            success: true, 
-            message: 'Webhook simulated successfully',
-            payload: mockWebhookPayload
-        });
+        // Update request body and forward to handler
+        req.body = mockWebhookPayload;
+        await handleWebhook(req, res);
 
     } catch (error) {
         console.error('Error simulating webhook:', error);

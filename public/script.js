@@ -99,7 +99,7 @@ function initializeDashboard() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            item_id: 'test_item_id'
+            item_id: '6PoLb53xx7Ie6JPyxMqXSvkdyKmzxLcgbjlGl'
           })
         });
         const data = await response.json();
