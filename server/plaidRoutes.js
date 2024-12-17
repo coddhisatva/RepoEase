@@ -3,19 +3,14 @@ const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 const router = express.Router();
 const admin = require('firebase-admin');
 const crypto = require('crypto');
+const { processDailyRoundups } = require('./utils/roundupProcessor');
 
 let stripe;
 
 // Initialize after router is created
-router.use((req, res, next) => {
+router.use(async (req, res, next) => {
     if (!stripe) {
-        console.log('Initializing Stripe with key:', process.env.STRIPE_SECRET_KEY ? 'exists' : 'missing');
         stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-        
-        // Test Stripe connection
-        stripe.customers.list({ limit: 1 })
-            .then(() => console.log('Stripe connection successful'))
-            .catch(error => console.error('Stripe connection error:', error));
     }
     next();
 });
@@ -496,88 +491,14 @@ router.post('/create_link_token', async (req, res) => {
     }
   });
 
-async function processDailyRoundups(startDate, endDate) {
-    console.log('Processing round-ups between:', startDate, 'and', endDate);
-    
-    try {
-        // 1. Find all pending round-ups
-        const pendingTransactions = await admin.firestore()
-            .collectionGroup('transactions')
-            .where('round_up_status', '==', 'pending')
-            .where('created_at', '>=', startDate)
-            .where('created_at', '<=', endDate)
-            .get();
-
-        if (pendingTransactions.empty) {
-            return { 
-                success: true, 
-                message: 'No pending round-ups found',
-                processed: 0
-            };
-        }
-
-        // 2. Calculate total round-up amount
-        let totalRoundUp = 0;
-        const authsToCancel = [];
-        
-        pendingTransactions.forEach(doc => {
-            const transaction = doc.data();
-            totalRoundUp += transaction.round_up_amount;
-            if (transaction.stripe_auth_id) {
-                authsToCancel.push(transaction.stripe_auth_id);
-            }
-        });
-
-        totalRoundUp = Number(totalRoundUp.toFixed(2));
-        console.log(`Total round-up amount: $${totalRoundUp}`);
-        console.log(`Found ${authsToCancel.length} auths to cancel`);
-
-        // 3. Create single transfer for total amount
-        // TODO: Add transfer creation logic
-
-        // 4. Cancel individual auth holds
-        for (const authId of authsToCancel) {
-            try {
-                await stripe.paymentIntents.cancel(authId);
-                console.log(`Cancelled auth: ${authId}`);
-            } catch (error) {
-                console.error(`Error cancelling auth ${authId}:`, error);
-            }
-        }
-
-        // 5. Update transaction statuses
-        const batch = admin.firestore().batch();
-        pendingTransactions.forEach(doc => {
-            batch.update(doc.ref, { 
-                round_up_status: 'processed',
-                processed_at: admin.firestore.FieldValue.serverTimestamp()
-            });
-        });
-        
-        await batch.commit();
-
-        return {
-            success: true,
-            message: 'Processed daily round-ups',
-            total: totalRoundUp,
-            count: pendingTransactions.size,
-            authsCancelled: authsToCancel.length
-        };
-
-    } catch (error) {
-        console.error('Error processing daily round-ups:', error);
-        throw error;
-    }
-}
-
-// Add this near your other endpoints
-router.post('/process_daily_roundups', async (req, res) => {
+  // The endpoint stays the same, just uses the imported function
+  router.post('/process_daily_roundups', async (req, res) => {
     try {
         const endDate = new Date();
         const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 1);  // 24 hours ago
+        startDate.setDate(startDate.getDate() - 1);
 
-        const result = await processDailyRoundups(startDate, endDate);
+        const result = await processDailyRoundups(startDate, endDate, stripe);
         res.json(result);
     } catch (error) {
         console.error('Error in process_daily_roundups endpoint:', error);
@@ -586,7 +507,7 @@ router.post('/process_daily_roundups', async (req, res) => {
             details: error.message
         });
     }
-});
+  });
 
   // Export the router
   module.exports = router;
