@@ -91,10 +91,10 @@ router.post('/create_link_token', async (req, res) => {
         const response = await plaidClient.linkTokenCreate({
             user: { client_user_id: user_id },
             client_name: 'Ease.Cash',
-            products: ['transactions'],           // Required product
-            optional_products: ['liabilities'],   // Optional product
+            products: ['transactions', 'auth'],
+            optional_products: ['liabilities'],
             country_codes: ['US'],
-            language: 'en',
+            language: 'en'
         });
         
         if (!response.data.link_token) {
@@ -117,24 +117,15 @@ router.post('/create_link_token', async (req, res) => {
   
   // Endpoint to exchange Public Token for Access Token
   router.post('/exchange_public_token', async (req, res) => {
-    const plaidClient = getPlaidClient();
-    const { public_token, userId, institution_id } = req.body;
-    
-    // Input validation
-    if (!public_token || !userId) {
-        console.error('Missing required fields in request');
-        return res.status(400).json({ 
-            error: 'Missing required fields',
-            details: 'public_token and userId are required'
-        });
-    }
-
     try {
-        // Exchange public token
+        const { public_token, userId, institution_id } = req.body;
+        console.log('Exchanging public token for:', { userId, institution_id });
+        
+        const plaidClient = getPlaidClient();
         const exchangeResponse = await plaidClient.itemPublicTokenExchange({
             public_token: public_token
         });
-        
+
         const access_token = exchangeResponse.data.access_token;
         const item_id = exchangeResponse.data.item_id;
 
@@ -142,39 +133,9 @@ router.post('/create_link_token', async (req, res) => {
         const accountsResponse = await plaidClient.accountsGet({
             access_token: access_token
         });
-        
+
         const accounts = accountsResponse.data.accounts;
-
-        // Check for existing connections with these accounts
-        const existingConnections = await admin.firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('plaidItems')
-            .where('status', '==', 'active')
-            .where('institution_id', '==', institution_id)
-            .get();
-
-        let hasDuplicate = false;
-        existingConnections.forEach(doc => {
-            const data = doc.data();
-            if (data.accountDetails) {
-                // Check for same account types/subtypes instead of IDs
-                const existingTypes = data.accountDetails.map(a => `${a.type}-${a.subtype}`);
-                const newTypes = accounts.map(a => `${a.type}-${a.subtype}`);
-                
-                const hasOverlap = existingTypes.some(type => newTypes.includes(type));
-                if (hasOverlap) {
-                    hasDuplicate = true;
-                }
-            }
-        });
-
-        if (hasDuplicate) {
-            return res.status(400).json({
-                error: 'Duplicate connection',
-                details: 'One or more accounts are already connected'
-            });
-        }
+        console.log('Retrieved accounts:', accounts);
 
         // Store new connection with account details and purposes
         const encryptedToken = encrypt(access_token);
@@ -194,109 +155,18 @@ router.post('/create_link_token', async (req, res) => {
                     subtype: a.subtype,
                     mask: a.mask,
                     purpose: (a.type === 'loan' && a.subtype === 'student') 
-                        ? 'destination'  // Only student loans are destinations
-                        : 'source'      // Everything else is a source for round-ups
+                        ? 'destination' 
+                        : 'source'
                 })),
                 created_at: admin.firestore.FieldValue.serverTimestamp(),
                 last_updated: admin.firestore.FieldValue.serverTimestamp(),
                 status: 'active'
             });
 
-        // Log the types of accounts connected
-        const purposes = accounts.map(a => ({
-            type: a.type,
-            subtype: a.subtype,
-            purpose: (a.type === 'loan' && a.subtype === 'student') 
-                ? 'destination' 
-                : 'source'
-        }));
-        console.log('Connected accounts with purposes:', purposes);
-
-        // Create Stripe customer
-        const stripeCustomer = await stripe.customers.create({
-            metadata: {
-                userId: userId,
-                plaid_item_id: item_id
-            }
-        });
-
-        // Update plaidItem with Stripe customer ID
-        await admin.firestore()
-            .collection('users')
-            .doc(userId)
-            .collection('plaidItems')
-            .doc(item_id)
-            .update({
-                stripe_customer_id: stripeCustomer.id
-            });
-
-        console.log('Created Stripe customer:', stripeCustomer.id);
-
-        // After successfully storing the plaidItem, fetch initial transactions
-        try {
-            const sourceAccounts = accounts
-                .filter(account => 
-                    account.type === 'depository' || account.type === 'credit'
-                )
-                .map(account => account.account_id);
-
-            if (sourceAccounts.length > 0) {
-                // Get transactions for the last 30 days
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() - 30);
-                
-                const transactionsResponse = await plaidClient.transactionsGet({
-                    access_token: access_token,
-                    start_date: startDate.toISOString().split('T')[0],
-                    end_date: new Date().toISOString().split('T')[0],
-                    options: {
-                        account_ids: sourceAccounts
-                    }
-                });
-
-                // Store transactions in Firestore
-                const batch = admin.firestore().batch();
-                const transactionsRef = admin.firestore()
-                    .collection('users')
-                    .doc(userId)
-                    .collection('transactions');
-
-                for (const transaction of transactionsResponse.data.transactions) {
-                    if (!transaction.pending) {
-                        // Calculate round-up (only for positive amounts)
-                        const roundUpAmount = transaction.amount > 0 
-                            ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
-                            : 0;
-
-                        const docRef = transactionsRef.doc(transaction.transaction_id);
-                        batch.set(docRef, {
-                            plaid_transaction_id: transaction.transaction_id,
-                            account_id: transaction.account_id,
-                            amount: transaction.amount,
-                            date: transaction.date,
-                            name: transaction.name,
-                            round_up_amount: roundUpAmount,
-                            round_up_status: roundUpAmount > 0 ? 'pending' : 'na',
-                            created_at: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                }
-
-                await batch.commit();
-                console.log(`Stored ${transactionsResponse.data.transactions.length} initial transactions`);
-            }
-        } catch (transactionError) {
-            console.error('Error fetching initial transactions:', transactionError);
-            // Don't fail the whole connection if transaction fetch fails
-        }
-
         res.json({ success: true });
     } catch (error) {
         console.error('Error in exchange_public_token:', error);
-        res.status(500).json({ 
-            error: 'Failed to exchange public token',
-            details: error.message 
-        });
+        res.status(500).json({ error: error.message });
     }
   });
   
@@ -506,6 +376,208 @@ router.post('/create_link_token', async (req, res) => {
             error: 'Failed to process daily round-ups',
             details: error.message
         });
+    }
+  });
+
+  // Add this with other Plaid endpoints
+  router.post('/transfer/authorize', async (req, res) => {
+    try {
+        const { userId, amount } = req.body;
+        const plaidClient = getPlaidClient();
+        
+        // Format amount to always have 2 decimal places
+        const formattedAmount = Number(amount).toFixed(2);
+        
+        // Get user's Plaid items
+        const plaidItemsSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .get();
+
+        if (plaidItemsSnapshot.empty) {
+            return res.status(400).json({ error: 'No linked bank accounts found' });
+        }
+
+        // Use the first linked account for now
+        const plaidItem = plaidItemsSnapshot.docs[0].data();
+        
+        // Decrypt the access token using our existing decrypt function
+        const decryptedToken = decrypt(plaidItem.encrypted_access_token);
+        
+        // Find the first source account
+        const sourceAccount = plaidItem.accountDetails.find(acc => acc.purpose === 'source');
+
+        if (!sourceAccount) {
+            return res.status(400).json({ error: 'No valid source account found' });
+        }
+
+        const authRequest = {
+            access_token: decryptedToken,
+            account_id: sourceAccount.id,
+            type: 'credit',
+            network: 'ach',
+            amount: formattedAmount,
+            ach_class: 'ppd',
+            user: {
+                legal_name: plaidItem.owner_names?.[0] || 'Account Owner'
+            }
+        };
+
+        console.log('Auth request prepared:', {
+            ...authRequest,
+            access_token: 'REDACTED'
+        });
+
+        const authResponse = await plaidClient.transferAuthorizationCreate(authRequest);
+        console.log('Authorization response from Plaid:', authResponse.data);
+
+        // Store the authorization in Firestore
+        await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('transferAuths')
+            .doc(authResponse.data.authorization.id)
+            .set({
+                status: authResponse.data.authorization.decision,
+                amount: amount,
+                created_at: admin.firestore.FieldValue.serverTimestamp(),
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+            });
+
+        console.log('Authorization stored in Firestore:', authResponse.data.authorization.id);
+
+        res.json({
+            authorization_id: authResponse.data.authorization.id,
+            decision: authResponse.data.authorization.decision
+        });
+
+    } catch (error) {
+        console.error('Transfer authorization error:', error);
+        res.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post('/transfer/create', async (req, res) => {
+    try {
+        const { userId, authorizationId } = req.body;
+        console.log('Creating transfer:', { userId, authorizationId });
+
+        // Get the authorization from Firestore
+        const authDoc = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('transferAuths')
+            .doc(authorizationId)
+            .get();
+
+        if (!authDoc.exists) {
+            console.log('Authorization not found:', authorizationId);
+            return res.status(404).json({ error: 'Authorization not found' });
+        }
+
+        // Get Plaid access token
+        const plaidItemsSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .get();
+
+        if (plaidItemsSnapshot.empty) {
+            console.log('No Plaid items found for user:', userId);
+            return res.status(404).json({ error: 'No linked bank accounts found' });
+        }
+
+        const plaidItem = plaidItemsSnapshot.docs[0].data();
+        const decryptedToken = decrypt(plaidItem.encrypted_access_token);
+        
+        // Find source account
+        const sourceAccount = plaidItem.accountDetails.find(acc => acc.purpose === 'source');
+        if (!sourceAccount) {
+            console.log('No source account found');
+            return res.status(400).json({ error: 'No valid source account found' });
+        }
+
+        console.log('Creating transfer with:', {
+            access_token: 'REDACTED',
+            account_id: sourceAccount.id,
+            authorization_id: authorizationId
+        });
+
+        try {
+            console.log('Sending transfer create request to Plaid...');
+            
+            // Get Plaid client first
+            const plaidClient = getPlaidClient();
+            
+            // Log what we're about to send
+            console.log('Building transfer request...');
+            const transferRequest = {
+                access_token: decryptedToken,
+                account_id: sourceAccount.id,
+                authorization_id: authorizationId,
+                description: 'Ease roundup'
+            };
+            
+            console.log('Transfer request:', {
+                ...transferRequest,
+                access_token: 'REDACTED'
+            });
+
+            const transferResponse = await plaidClient.transferCreate(transferRequest);
+            console.log('Raw Plaid response:', transferResponse);
+
+            if (!transferResponse.data?.transfer) {
+                console.error('Unexpected Plaid response format:', transferResponse);
+                return res.status(400).json({ 
+                    error: 'Invalid Plaid response',
+                    details: transferResponse 
+                });
+            }
+
+            console.log('Transfer created:', transferResponse.data);
+
+            // Store transfer details
+            await admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('transfers')
+                .doc(transferResponse.data.transfer.id)
+                .set({
+                    status: transferResponse.data.transfer.status,
+                    amount: authDoc.data().amount,
+                    created_at: admin.firestore.FieldValue.serverTimestamp(),
+                    authorization_id: authorizationId
+                });
+
+            res.json({
+                transfer_id: transferResponse.data.transfer.id,
+                status: transferResponse.data.transfer.status
+            });
+        } catch (plaidError) {
+            // Log the full error structure
+            console.error('Detailed Plaid error:', {
+                message: plaidError.message,
+                stack: plaidError.stack,
+                response: {
+                    data: plaidError.response?.data,
+                    status: plaidError.response?.status,
+                    statusText: plaidError.response?.statusText,
+                    headers: plaidError.response?.headers
+                }
+            });
+
+            return res.status(400).json({
+                error: 'Plaid API error',
+                details: {
+                    message: plaidError.message,
+                    plaidError: plaidError.response?.data
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Transfer creation error:', error);
+        res.status(500).json({ error: error.message });
     }
   });
 

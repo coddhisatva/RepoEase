@@ -127,6 +127,56 @@ function initializeDashboard() {
     });
   }
 
+  // Add test transfer button handler
+  const testTransferButton = document.getElementById('testTransfer');
+  if (testTransferButton) {
+    console.log('Test transfer button found, adding click listener');
+    testTransferButton.addEventListener('click', async () => {
+      try {
+        // Get current user from auth
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          console.error('No user logged in');
+          return;
+        }
+
+        // 1. Create authorization
+        const authResponse = await fetch('http://localhost:3000/api/plaid/transfer/authorize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: user.uid,
+            amount: 10.50  // Test amount
+          })
+        });
+        const authData = await authResponse.json();
+        console.log('Authorization response:', authData);
+
+        if (authData.decision === 'approved') {
+          // 2. Create transfer
+          const transferResponse = await fetch('http://localhost:3000/api/plaid/transfer/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              userId: user.uid,
+              authorizationId: authData.authorization_id
+            })
+          });
+          const transferData = await transferResponse.json();
+          console.log('Transfer response:', transferData);
+        }
+      } catch (error) {
+        console.error('Error testing transfer:', error);
+      }
+    });
+  }
+
   console.log('Dashboard script loaded. User should be signed in if they’re here.');
 }
 
