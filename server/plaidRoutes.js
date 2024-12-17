@@ -361,7 +361,10 @@ router.post('/create_link_token', async (req, res) => {
 
             for (const transaction of transactionsResponse.data.transactions) {
                 if (!transaction.pending) {
-                    const roundUpAmount = Math.ceil(transaction.amount) - transaction.amount;
+                    // Only process positive transactions
+                    const roundUpAmount = transaction.amount > 0 
+                        ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
+                        : 0;
                     
                     const docRef = transactionsRef.doc(transaction.transaction_id);
                     batch.set(docRef, {
@@ -371,7 +374,7 @@ router.post('/create_link_token', async (req, res) => {
                         date: transaction.date,
                         name: transaction.name,
                         round_up_amount: roundUpAmount,
-                        round_up_status: 'pending',
+                        round_up_status: transaction.amount > 0 ? 'pending' : 'na',
                         created_at: admin.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
                 }
