@@ -1,0 +1,131 @@
+[debug] [2024-12-19T02:00:21.020Z] ----------------------------------------------------------------------
+[debug] [2024-12-19T02:00:21.023Z] Command:       /usr/local/Cellar/node/23.4.0/bin/node /usr/local/bin/firebase functions:shell
+[debug] [2024-12-19T02:00:21.024Z] CLI Version:   13.25.0
+[debug] [2024-12-19T02:00:21.024Z] Platform:      darwin
+[debug] [2024-12-19T02:00:21.024Z] Node Version:  v23.4.0
+[debug] [2024-12-19T02:00:21.025Z] Time:          Wed Dec 18 2024 18:00:21 GMT-0800 (Pacific Standard Time)
+[debug] [2024-12-19T02:00:21.026Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-12-19T02:00:21.111Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-12-19T02:00:21.112Z] > authorizing via signed-in user (conoregan151@gmail.com)
+[debug] [2024-12-19T02:00:21.113Z] [iam] checking project ease-f14d8 for permissions ["firebase.projects.get"]
+[debug] [2024-12-19T02:00:21.114Z] Checked if tokens are valid: true, expires at: 1734576503573
+[debug] [2024-12-19T02:00:21.114Z] Checked if tokens are valid: true, expires at: 1734576503573
+[debug] [2024-12-19T02:00:21.115Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/ease-f14d8:testIamPermissions [none]
+[debug] [2024-12-19T02:00:21.115Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/ease-f14d8:testIamPermissions x-goog-quota-user=projects/ease-f14d8
+[debug] [2024-12-19T02:00:21.115Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/ease-f14d8:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2024-12-19T02:00:21.351Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/ease-f14d8:testIamPermissions 200
+[debug] [2024-12-19T02:00:21.352Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/ease-f14d8:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2024-12-19T02:00:21.525Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2024-12-19T02:00:21.526Z] defaultcredentials: writing to file /Users/conor/.config/firebase/conoregan151_gmail_com_application_default_credentials.json
+[debug] [2024-12-19T02:00:21.526Z] DEBUG: Setting GAC to /Users/conor/.config/firebase/conoregan151_gmail_com_application_default_credentials.json
+[debug] [2024-12-19T02:00:21.527Z] Checked if tokens are valid: true, expires at: 1734576503573
+[debug] [2024-12-19T02:00:21.527Z] Checked if tokens are valid: true, expires at: 1734576503573
+[debug] [2024-12-19T02:00:21.527Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/ease-f14d8/adminSdkConfig [none]
+[debug] [2024-12-19T02:00:21.817Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/ease-f14d8/adminSdkConfig 200
+[debug] [2024-12-19T02:00:21.817Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/ease-f14d8/adminSdkConfig {"projectId":"ease-f14d8","storageBucket":"ease-f14d8.firebasestorage.app"}
+[debug] [2024-12-19T02:00:21.836Z] [functions] Watching "/Users/conor/Dropbox/EaseDev/RepoEase/functions" for Cloud Functions...
+[debug] [2024-12-19T02:00:21.841Z] Validating nodejs source
+[debug] [2024-12-19T02:00:22.373Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1",
+    "stripe": "^17.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2024-12-19T02:00:22.373Z] Building nodejs source
+[debug] [2024-12-19T02:00:22.374Z] Failed to find version of module node: reached end of search path /Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules
+[warn] ⚠  functions: Your requested "node" version "20" doesn't match your global version "23". Using node@23 from host. 
+[info] i  functions: Loaded environment variables from .env.ease-f14d8. 
+[debug] [2024-12-19T02:00:22.377Z] Could not find functions.yaml. Must use http discovery
+[debug] [2024-12-19T02:00:22.386Z] Found firebase-functions binary at '/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8147
+
+[debug] [2024-12-19T02:00:22.623Z] Got response from /__/functions.yaml {"endpoints":{"processEndOfDay":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"59 23 * * *","retryConfig":{"retryCount":3},"timeZone":"America/Los_Angeles"},"entryPoint":"processEndOfDay"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+[debug] [2024-12-19T02:00:26.662Z] [functions] Loaded functions definitions from source: processEndOfDay.
+[debug] [2024-12-19T02:00:26.663Z] [functions[us-central1-processEndOfDay]] function ignored because the pubsub emulator does not exist or is not running.
+[info] i  functions: Loaded functions: processEndOfDay 
+[warn] ⚠  functions: The following emulators are not running, calls to these services will affect production: firestore, database, pubsub, storage, eventarc, tasks 
+[debug] [2024-12-19T02:00:28.012Z] shell:processEndOfDay: trigger={"entryPoint":"processEndOfDay","platform":"gcfv2","region":"us-central1","name":"processEndOfDay","id":"us-central1-processEndOfDay","codebase":"default","availableMemoryMb":256,"labels":{"EVENTARC_CLOUD_EVENT_SOURCE":"run-emulated.googleapis.com/projects/ease-f14d8/locations/us-central1/services/processEndOfDay"},"timeoutSeconds":60,"secretEnvironmentVariables":[],"eventTrigger":{"eventType":"pubsub","resource":""},"schedule":{"schedule":"59 23 * * *","timeZone":"America/Los_Angeles","retryConfig":{"retryCount":3}}}
+[debug] [2024-12-19T02:00:28.013Z] shell:processEndOfDay: opts={}, data={}
+[info] i  functions: Loaded environment variables from .env.ease-f14d8. 
+[debug] [2024-12-19T02:00:28.024Z] DEBUG: [worker-pool] addWorker(us-central1-processEndOfDay)
+[debug] [2024-12-19T02:00:28.025Z] DEBUG: [worker-pool] Adding worker with key us-central1-processEndOfDay, total=1
+[info] >  (node:58382) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead. {"user":"(node:58382) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m (node:58382) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead."}}
+[info] >  (Use `node --trace-deprecation ...` to show where the warning was created) {"user":"(Use `node --trace-deprecation ...` to show where the warning was created)","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m (Use `node --trace-deprecation ...` to show where the warning was created)"}}
+[debug] [2024-12-19T02:00:28.883Z] DEBUG: [runtime-status] [58382] Resolved module firebase-admin {"declared":true,"installed":true,"version":"12.7.0","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-admin/lib/index.js"}
+[debug] [2024-12-19T02:00:28.884Z] DEBUG: [runtime-status] [58382] Resolved module firebase-functions {"declared":true,"installed":true,"version":"6.1.2","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-functions/lib/v2/index.js"}
+[debug] [2024-12-19T02:00:28.884Z] DEBUG: [runtime-status] [58382] Outgoing network have been stubbed. [{"name":"http","status":"mocked"},{"name":"http","status":"mocked"},{"name":"https","status":"mocked"},{"name":"https","status":"mocked"},{"name":"net","status":"mocked"}]
+[debug] [2024-12-19T02:00:28.885Z] DEBUG: [runtime-status] [58382] Resolved module firebase-functions {"declared":true,"installed":true,"version":"6.1.2","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-functions/lib/v2/index.js"}
+[debug] [2024-12-19T02:00:29.076Z] DEBUG: [runtime-status] [58382] Checked functions.config() {"config":{}}
+[debug] [2024-12-19T02:00:29.076Z] DEBUG: [runtime-status] [58382] firebase-functions has been stubbed. {"functionsResolution":{"declared":true,"installed":true,"version":"6.1.2","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-functions/lib/v2/index.js"}}
+[debug] [2024-12-19T02:00:29.077Z] DEBUG: [runtime-status] [58382] Resolved module firebase-functions {"declared":true,"installed":true,"version":"6.1.2","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-functions/lib/v2/index.js"}
+[debug] [2024-12-19T02:00:29.079Z] DEBUG: [runtime-status] [58382] Resolved module firebase-admin {"declared":true,"installed":true,"version":"12.7.0","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-admin/lib/index.js"}
+[debug] [2024-12-19T02:00:29.080Z] DEBUG: [runtime-status] [58382] Resolved module firebase-functions {"declared":true,"installed":true,"version":"6.1.2","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-functions/lib/v2/index.js"}
+[debug] [2024-12-19T02:00:29.080Z] DEBUG: [runtime-status] [58382] firebase-admin has been stubbed. {"adminResolution":{"declared":true,"installed":true,"version":"12.7.0","resolution":"/Users/conor/Dropbox/EaseDev/RepoEase/functions/node_modules/firebase-admin/lib/index.js"}}
+[debug] [2024-12-19T02:00:29.082Z] DEBUG: [runtime-status] [58382] initializeApp(DEFAULT) {"storageBucket":"ease-f14d8.firebasestorage.app","projectId":"ease-f14d8"}
+[debug] [2024-12-19T02:00:29.088Z] DEBUG: [runtime-status] [58382] Functions runtime initialized. {"cwd":"/Users/conor/Dropbox/EaseDev/RepoEase/functions","node_version":"23.4.0"}
+[debug] [2024-12-19T02:00:29.088Z] DEBUG: [runtime-status] [58382] Listening to port: /var/folders/yb/kvvl1t_j1dx2y2qhqqp9d8r80000gn/T/fire_emu_3abc144f77bb1735.sock
+[debug] [2024-12-19T02:00:29.160Z] DEBUG: [worker-us-central1-processEndOfDay-d566588f-a46a-4bc4-b241-3d91e07f6261]: IDLE
+[info] >  Processing round-ups between: 2024-12-18T02:00:29.230Z and 2024-12-19T02:00:29.230Z {"user":"Processing round-ups between: 2024-12-18T02:00:29.230Z and 2024-12-19T02:00:29.230Z","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Processing round-ups between: 2024-12-18T02:00:29.230Z and 2024-12-19T02:00:29.230Z"}}
+[warn] ⚠  functions: The Cloud Firestore emulator is not running, so calls to Firestore will affect production. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"The Cloud Firestore emulator is not running, so calls to Firestore will affect production."}}
+[warn] ⚠  Google API requested!
+   - URL: "https://oauth2.googleapis.com/token"
+   - Be careful, this may be a production service. {"metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"Google API requested!\n   - URL: \"https://oauth2.googleapis.com/token\"\n   - Be careful, this may be a production service."}}
+[info] >  Total round-up amount: $11.89 {"user":"Total round-up amount: $11.89","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Total round-up amount: $11.89"}}
+[info] >  Found 20 auths to cancel {"user":"Found 20 auths to cancel","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Found 20 auths to cancel"}}
+[info] >  Auth pi_3QXYxlKl4q996GNT1D0edRJI already cancelled {"user":"Auth pi_3QXYxlKl4q996GNT1D0edRJI already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxlKl4q996GNT1D0edRJI already cancelled"}}
+[info] >  Auth pi_3QXYxjKl4q996GNT0QBwaOMp already cancelled {"user":"Auth pi_3QXYxjKl4q996GNT0QBwaOMp already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxjKl4q996GNT0QBwaOMp already cancelled"}}
+[info] >  Auth pi_3QXYxmKl4q996GNT0r95i0sR already cancelled {"user":"Auth pi_3QXYxmKl4q996GNT0r95i0sR already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxmKl4q996GNT0r95i0sR already cancelled"}}
+[info] >  Auth pi_3QXYxkKl4q996GNT1zZGS5eD already cancelled {"user":"Auth pi_3QXYxkKl4q996GNT1zZGS5eD already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxkKl4q996GNT1zZGS5eD already cancelled"}}
+[info] >  Auth pi_3QXYxkKl4q996GNT1TuwLa33 already cancelled {"user":"Auth pi_3QXYxkKl4q996GNT1TuwLa33 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxkKl4q996GNT1TuwLa33 already cancelled"}}
+[info] >  Auth pi_3QXYxoKl4q996GNT1v4Yaibq already cancelled {"user":"Auth pi_3QXYxoKl4q996GNT1v4Yaibq already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxoKl4q996GNT1v4Yaibq already cancelled"}}
+[info] >  Auth pi_3QXYxlKl4q996GNT19u1DNoF already cancelled {"user":"Auth pi_3QXYxlKl4q996GNT19u1DNoF already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxlKl4q996GNT19u1DNoF already cancelled"}}
+[info] >  Auth pi_3QXYxkKl4q996GNT0k6SMDV5 already cancelled {"user":"Auth pi_3QXYxkKl4q996GNT0k6SMDV5 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxkKl4q996GNT0k6SMDV5 already cancelled"}}
+[info] >  Auth pi_3QXYxnKl4q996GNT14HkJuq2 already cancelled {"user":"Auth pi_3QXYxnKl4q996GNT14HkJuq2 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxnKl4q996GNT14HkJuq2 already cancelled"}}
+[info] >  Auth pi_3QXYxiKl4q996GNT1BpERYUh already cancelled {"user":"Auth pi_3QXYxiKl4q996GNT1BpERYUh already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxiKl4q996GNT1BpERYUh already cancelled"}}
+[info] >  Auth pi_3QXYxoKl4q996GNT1FIpdALB already cancelled {"user":"Auth pi_3QXYxoKl4q996GNT1FIpdALB already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxoKl4q996GNT1FIpdALB already cancelled"}}
+[info] >  Auth pi_3QXYxlKl4q996GNT1UhTsYpD already cancelled {"user":"Auth pi_3QXYxlKl4q996GNT1UhTsYpD already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxlKl4q996GNT1UhTsYpD already cancelled"}}
+[info] >  Auth pi_3QXYxiKl4q996GNT1Y7AMa67 already cancelled {"user":"Auth pi_3QXYxiKl4q996GNT1Y7AMa67 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxiKl4q996GNT1Y7AMa67 already cancelled"}}
+[info] >  Auth pi_3QXYxmKl4q996GNT0FjlCGPg already cancelled {"user":"Auth pi_3QXYxmKl4q996GNT0FjlCGPg already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxmKl4q996GNT0FjlCGPg already cancelled"}}
+[info] >  Auth pi_3QXYxiKl4q996GNT07hid6g6 already cancelled {"user":"Auth pi_3QXYxiKl4q996GNT07hid6g6 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxiKl4q996GNT07hid6g6 already cancelled"}}
+[info] >  Auth pi_3QXYxjKl4q996GNT06SYiLgL already cancelled {"user":"Auth pi_3QXYxjKl4q996GNT06SYiLgL already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxjKl4q996GNT06SYiLgL already cancelled"}}
+[info] >  Auth pi_3QXYxjKl4q996GNT1Ce1HOdt already cancelled {"user":"Auth pi_3QXYxjKl4q996GNT1Ce1HOdt already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxjKl4q996GNT1Ce1HOdt already cancelled"}}
+[info] >  Auth pi_3QXYxnKl4q996GNT1rNHKykC already cancelled {"user":"Auth pi_3QXYxnKl4q996GNT1rNHKykC already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxnKl4q996GNT1rNHKykC already cancelled"}}
+[info] >  Auth pi_3QXYxnKl4q996GNT1b6IwCAD already cancelled {"user":"Auth pi_3QXYxnKl4q996GNT1b6IwCAD already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxnKl4q996GNT1b6IwCAD already cancelled"}}
+[info] >  Auth pi_3QXYxmKl4q996GNT0G6gZzI6 already cancelled {"user":"Auth pi_3QXYxmKl4q996GNT0G6gZzI6 already cancelled","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Auth pi_3QXYxmKl4q996GNT0G6gZzI6 already cancelled"}}
+[info] >  admin exists: true {"user":"admin exists: true","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m admin exists: true"}}
+[info] >  admin.firestore exists: true {"user":"admin.firestore exists: true","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m admin.firestore exists: true"}}
+[info] >  admin.firestore.FieldValue exists: false {"user":"admin.firestore.FieldValue exists: false","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m admin.firestore.FieldValue exists: false"}}
+[info] >  Full admin.firestore object: [Function: bound fn] {"user":"Full admin.firestore object: [Function: bound fn]","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Full admin.firestore object: [Function: bound fn]"}}
+[info] >  End-of-day processing complete: { {"user":"End-of-day processing complete: {","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m End-of-day processing complete: {"}}
+[info] >    success: true, {"user":"  success: true,","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m   success: true,"}}
+[info] >    message: 'Processed daily round-ups', {"user":"  message: 'Processed daily round-ups',","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m   message: 'Processed daily round-ups',"}}
+[info] >    total: 11.89, {"user":"  total: 11.89,","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m   total: 11.89,"}}
+[info] >    count: 20, {"user":"  count: 20,","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m   count: 20,"}}
+[info] >    authsCancelled: 20 {"user":"  authsCancelled: 20","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m   authsCancelled: 20"}}
+[info] >  } {"user":"}","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m }"}}
+[debug] [2024-12-19T02:02:51.060Z] shell:processEndOfDay: trigger={"entryPoint":"processEndOfDay","platform":"gcfv2","region":"us-central1","name":"processEndOfDay","id":"us-central1-processEndOfDay","codebase":"default","availableMemoryMb":256,"labels":{"EVENTARC_CLOUD_EVENT_SOURCE":"run-emulated.googleapis.com/projects/ease-f14d8/locations/us-central1/services/processEndOfDay"},"timeoutSeconds":60,"secretEnvironmentVariables":[],"eventTrigger":{"eventType":"pubsub","resource":""},"schedule":{"schedule":"59 23 * * *","timeZone":"America/Los_Angeles","retryConfig":{"retryCount":3}}}
+[debug] [2024-12-19T02:02:51.067Z] shell:processEndOfDay: opts={}, data={}
+[info] >  Processing round-ups between: 2024-12-18T02:02:51.087Z and 2024-12-19T02:02:51.087Z {"user":"Processing round-ups between: 2024-12-18T02:02:51.087Z and 2024-12-19T02:02:51.087Z","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m Processing round-ups between: 2024-12-18T02:02:51.087Z and 2024-12-19T02:02:51.087Z"}}
+[info] >  End-of-day processing complete: { success: true, message: 'No pending round-ups found', processed: 0 } {"user":"End-of-day processing complete: { success: true, message: 'No pending round-ups found', processed: 0 }","metadata":{"emulator":{"name":"functions"},"function":{"name":"us-central1-processEndOfDay"},"extension":{},"message":"\u001b[90m> \u001b[39m End-of-day processing complete: { success: true, message: 'No pending round-ups found', processed: 0 }"}}

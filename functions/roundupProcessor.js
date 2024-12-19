@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { FieldValue } = require('firebase-admin/firestore');
 
 async function processDailyRoundups(startDate, endDate, stripe) {
     console.log('Processing round-ups between:', startDate, 'and', endDate);
@@ -39,8 +40,13 @@ async function processDailyRoundups(startDate, endDate, stripe) {
         // 3. Cancel individual auth holds
         for (const authId of authsToCancel) {
             try {
-                await stripe.paymentIntents.cancel(authId);
-                console.log(`Cancelled auth: ${authId}`);
+                const intent = await stripe.paymentIntents.retrieve(authId);
+                if (intent.status !== 'canceled') {
+                    await stripe.paymentIntents.cancel(authId);
+                    console.log(`Cancelled auth: ${authId}`);
+                } else {
+                    console.log(`Auth ${authId} already cancelled`);
+                }
             } catch (error) {
                 console.error(`Error cancelling auth ${authId}:`, error);
             }
@@ -48,10 +54,15 @@ async function processDailyRoundups(startDate, endDate, stripe) {
 
         // 4. Update transaction statuses
         const batch = admin.firestore().batch();
+        console.log('admin exists:', !!admin);
+        console.log('admin.firestore exists:', !!admin.firestore);
+        console.log('admin.firestore.FieldValue exists:', !!admin.firestore.FieldValue);
+        console.log('Full admin.firestore object:', admin.firestore);
+
         pendingTransactions.forEach(doc => {
             batch.update(doc.ref, { 
                 round_up_status: 'processed',
-                processed_at: admin.firestore.FieldValue.serverTimestamp()
+                processed_at: FieldValue.serverTimestamp()
             });
         });
         

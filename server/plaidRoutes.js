@@ -3,7 +3,7 @@ const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 const router = express.Router();
 const admin = require('firebase-admin');
 const crypto = require('crypto');
-const { processDailyRoundups } = require('./utils/roundupProcessor');
+const { processDailyRoundups } = require('../functions/roundupProcessor');
 
 let stripe;
 
