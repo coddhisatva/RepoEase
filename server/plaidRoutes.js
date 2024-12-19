@@ -266,46 +266,55 @@ router.post('/create_link_token', async (req, res) => {
                 .doc(userId)
                 .collection('transactions');
 
-            for (const transaction of transactionsResponse.data.transactions) {
-                if (!transaction.pending) {
-                    // Calculate round-up
-                    const roundUpAmount = transaction.amount > 0 
-                        ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
-                        : 0;
-                    
-                    let stripeAuthId = null;
-                    
-                    // Only create auth if there's a round-up amount
-                    if (roundUpAmount > 0) {
-                        try {
-                            // Create Stripe authorization hold
-                            const auth = await stripe.paymentIntents.create({
-                                amount: Math.round(roundUpAmount * 100), // Convert to cents
-                                currency: 'usd',
-                                customer: plaidItem.stripe_customer_id, // We'll need this from earlier setup
-                                capture_method: 'manual',
-                                description: `Round-up hold for ${transaction.name}`
-                            });
-                            stripeAuthId = auth.id;
-                            console.log(`Created auth hold: ${stripeAuthId} for $${roundUpAmount}`);
-                        } catch (stripeError) {
-                            console.error('Stripe auth error:', stripeError);
-                            // Continue processing other transactions
-                        }
-                    }
+            const userAccounts = await admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('plaidItems')
+                .where('accountDetails.purpose', '==', 'destination')
+                .get();
 
-                    const docRef = transactionsRef.doc(transaction.transaction_id);
-                    batch.set(docRef, {
-                        plaid_transaction_id: transaction.transaction_id,
-                        account_id: transaction.account_id,
-                        amount: transaction.amount,
-                        date: transaction.date,
-                        name: transaction.name,
-                        round_up_amount: roundUpAmount,
-                        round_up_status: roundUpAmount > 0 ? 'pending' : 'na',
-                        stripe_auth_id: stripeAuthId,
-                        created_at: admin.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
+            if (!userAccounts.empty) {  // Only create auth holds if SLA exists
+                for (const transaction of transactionsResponse.data.transactions) {
+                    if (!transaction.pending) {
+                        // Calculate round-up
+                        const roundUpAmount = transaction.amount > 0 
+                            ? Number((Math.ceil(transaction.amount) - transaction.amount).toFixed(2))
+                            : 0;
+                        
+                        let stripeAuthId = null;
+                        
+                        // Only create auth if there's a round-up amount
+                        if (roundUpAmount > 0) {
+                            try {
+                                // Create Stripe authorization hold
+                                const auth = await stripe.paymentIntents.create({
+                                    amount: Math.round(roundUpAmount * 100), // Convert to cents
+                                    currency: 'usd',
+                                    customer: plaidItem.stripe_customer_id, // We'll need this from earlier setup
+                                    capture_method: 'manual',
+                                    description: `Round-up hold for ${transaction.name}`
+                                });
+                                stripeAuthId = auth.id;
+                                console.log(`Created auth hold: ${stripeAuthId} for $${roundUpAmount}`);
+                            } catch (stripeError) {
+                                console.error('Stripe auth error:', stripeError);
+                                // Continue processing other transactions
+                            }
+                        }
+
+                        const docRef = transactionsRef.doc(transaction.transaction_id);
+                        batch.set(docRef, {
+                            plaid_transaction_id: transaction.transaction_id,
+                            account_id: transaction.account_id,
+                            amount: transaction.amount,
+                            date: transaction.date,
+                            name: transaction.name,
+                            round_up_amount: roundUpAmount,
+                            round_up_status: roundUpAmount > 0 ? 'pending' : 'na',
+                            stripe_auth_id: stripeAuthId,
+                            created_at: admin.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    }
                 }
             }
 

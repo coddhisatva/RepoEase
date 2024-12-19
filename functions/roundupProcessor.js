@@ -1,17 +1,26 @@
 const admin = require('firebase-admin');
 const { FieldValue } = require('firebase-admin/firestore');
 
-async function processDailyRoundups(startDate, endDate, stripe) {
-    console.log('Processing round-ups between:', startDate, 'and', endDate);
+async function processDailyRoundups(userId, pendingTransactions, startDate, endDate, stripe) {
+    console.log(`Processing round-ups for user ${userId} between:`, startDate, 'and', endDate);
     
     try {
-        // 1. Find all pending round-ups
-        const pendingTransactions = await admin.firestore()
-            .collectionGroup('transactions')
-            .where('round_up_status', '==', 'pending')
-            .where('created_at', '>=', startDate)
-            .where('created_at', '<=', endDate)
+        // Check for destination account first
+        const userAccounts = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .where('accountDetails.purpose', '==', 'destination')
             .get();
+
+        if (userAccounts.empty) {
+            console.log(`User ${userId} has no student loan account linked - skipping processing`);
+            return {
+                success: false,
+                message: 'No student loan account linked',
+                userId
+            };
+        }
 
         if (pendingTransactions.empty) {
             return { 
@@ -21,7 +30,7 @@ async function processDailyRoundups(startDate, endDate, stripe) {
             };
         }
 
-        // 2. Calculate total round-up amount
+        // 1. Calculate total round-up amount for this user
         let totalRoundUp = 0;
         const authsToCancel = [];
         
@@ -34,10 +43,10 @@ async function processDailyRoundups(startDate, endDate, stripe) {
         });
 
         totalRoundUp = Number(totalRoundUp.toFixed(2));
-        console.log(`Total round-up amount: $${totalRoundUp}`);
+        console.log(`Total round-up amount for user ${userId}: $${totalRoundUp}`);
         console.log(`Found ${authsToCancel.length} auths to cancel`);
 
-        // 3. Cancel individual auth holds
+        // 2. Cancel individual auth holds
         for (const authId of authsToCancel) {
             try {
                 const intent = await stripe.paymentIntents.retrieve(authId);
@@ -52,13 +61,78 @@ async function processDailyRoundups(startDate, endDate, stripe) {
             }
         }
 
-        // 4. Update transaction statuses
-        const batch = admin.firestore().batch();
-        console.log('admin exists:', !!admin);
-        console.log('admin.firestore exists:', !!admin.firestore);
-        console.log('admin.firestore.FieldValue exists:', !!admin.firestore.FieldValue);
-        console.log('Full admin.firestore object:', admin.firestore);
+        // 3. Get user's subscription status
+        const subscriptionDoc = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('subscription')
+            .doc('current')
+            .get();
 
+        const subscription = subscriptionDoc.data();
+        const remainingFee = subscription.monthly_fee - subscription.current_period.collected;
+
+        // 4. Create appropriate transfer(s)
+        if (remainingFee > 0) {
+            // Some or all goes to subscription
+            const subscriptionAmount = Math.min(totalRoundUp, remainingFee);
+            
+            // Create subscription transfer
+            await admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('transfers')
+                .add({
+                    amount: subscriptionAmount,
+                    date: FieldValue.serverTimestamp(),
+                    type: 'subscription_fee',
+                    status: 'pending',
+                    plaid_transfer_id: null  // Will be set when transfer is created
+                });
+
+            // Update subscription collected amount
+            await subscriptionDoc.ref.update({
+                'current_period.collected': FieldValue.increment(subscriptionAmount)
+            });
+
+            // If there's remaining amount after subscription, create loan payment
+            const loanAmount = totalRoundUp - subscriptionAmount;
+            if (loanAmount > 0) {
+                // Get destination account ID from first linked loan account
+                const destinationAccount = userAccounts.docs[0].data().accountDetails
+                    .find(account => account.purpose === 'destination');
+
+                await admin.firestore()
+                    .collection('users')
+                    .doc(userId)
+                    .collection('transfers')
+                    .add({
+                        amount: loanAmount,
+                        date: FieldValue.serverTimestamp(),
+                        type: 'loan_payment',
+                        status: 'pending',
+                        plaid_transfer_id: null,
+                        loan_account_id: destinationAccount.id  // Use actual account ID
+                    });
+            }
+        } else {
+            // All goes to loan payment
+            await admin.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('transfers')
+                .add({
+                    amount: totalRoundUp,
+                    date: FieldValue.serverTimestamp(),
+                    type: 'loan_payment',
+                    status: 'pending',
+                    plaid_transfer_id: null,
+                    loan_account_id: 'xxx'  // TODO: Get from user's settings
+                });
+        }
+
+        // 5. Update transaction statuses
+        const batch = admin.firestore().batch();
         pendingTransactions.forEach(doc => {
             batch.update(doc.ref, { 
                 round_up_status: 'processed',
