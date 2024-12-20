@@ -1,13 +1,12 @@
-const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
+const { Configuration, PlaidApi } = require('plaid');
 require('dotenv').config();
 
-// Plaid client config
 const configuration = new Configuration({
-    basePath: PlaidEnvironments.sandbox, // Use sandbox for demo
+    basePath: process.env.PLAID_ENV === 'sandbox' ? 'https://sandbox.plaid.com' : 'https://development.plaid.com',
     baseOptions: {
         headers: {
             'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-            'PLAID-SECRET': process.env.PLAID_SANDBOX_SECRET,
+            'PLAID-SECRET': process.env.PLAID_SECRET,
         },
     },
 });

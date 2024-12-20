@@ -226,11 +226,11 @@ router.post('/create_link_token', async (req, res) => {
   
   // Create a function for the webhook handler logic
   async function handleWebhook(req, res) {
-    const { webhook_type, webhook_code, item_id } = req.body;
-    console.log('Webhook handler started:', { webhook_type, webhook_code, item_id });
+    const { webhook_type, webhook_code, item_id, transfer_id } = req.body;
+    console.log('Webhook received:', { webhook_type, webhook_code, item_id, transfer_id });
 
     try {
-        if (webhook_type === 'TRANSACTIONS' && webhook_code === 'DEFAULT_UPDATE') {
+        if (webhook_type === 'TRANSACTIONS') {
             // Find plaidItem
             const plaidItemsQuery = await admin.firestore()
                 .collectionGroup('plaidItems')
@@ -326,18 +326,50 @@ router.post('/create_link_token', async (req, res) => {
                 message: 'Processed new transactions',
                 count: transactionsResponse.data.transactions.length
             });
+        } 
+        else if (webhook_type === 'TRANSFER' && transfer_id) {
+            console.log('Transfer webhook received:', transfer_id);
+            // Update transfer status in Firestore
+            const transfersSnapshot = await admin.firestore()
+                .collectionGroup('transfers')
+                .where('transfer_id', '==', transfer_id)
+                .get();
+
+            if (!transfersSnapshot.empty) {
+                const transferDoc = transfersSnapshot.docs[0];
+                await transferDoc.ref.update({
+                    status: webhook_code,
+                    updated_at: admin.firestore.FieldValue.serverTimestamp()
+                });
+                console.log(`Updated transfer ${transfer_id} status to ${webhook_code}`);
+
+                // If transfer failed, we need to handle it
+                if (webhook_code === 'TRANSFER_FAILED') {
+                    // Get the original transaction IDs
+                    const transferData = transferDoc.data();
+                    if (transferData.transactionIds) {
+                        // Reset transactions to pending
+                        const batch = admin.firestore().batch();
+                        for (const txId of transferData.transactionIds) {
+                            const txRef = admin.firestore()
+                                .collection('users')
+                                .doc(transferData.userId)
+                                .collection('transactions')
+                                .doc(txId);
+                            batch.update(txRef, {
+                                round_up_status: 'pending'
+                            });
+                        }
+                        await batch.commit();
+                    }
+                }
+            }
         }
-        
-        return res.json({ 
-            success: true, 
-            message: 'Webhook type not handled' 
-        });
+
+        return res.json({ success: true });
     } catch (error) {
-        console.error('Error processing webhook:', error);
-        return res.status(500).json({ 
-            error: 'Failed to process webhook',
-            details: error.message 
-        });
+        console.error('Webhook error:', error);
+        return res.status(500).json({ error: error.message });
     }
   }
 
@@ -586,6 +618,147 @@ router.post('/create_link_token', async (req, res) => {
         }
     } catch (error) {
         console.error('Transfer creation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add to existing routes
+  router.post('/create_transfer', async (req, res) => {
+    try {
+        const { 
+            sourceAccountId, 
+            destinationAccountId,
+            amount,
+            userId
+        } = req.body;
+
+        // Get the access tokens for source and destination accounts
+        const accountsSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('plaidItems')
+            .get();
+
+        let sourceToken = null;
+        let destinationToken = null;
+
+        accountsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.accountDetails.some(acc => acc.id === sourceAccountId)) {
+                sourceToken = data.access_token;
+            }
+            if (data.accountDetails.some(acc => acc.id === destinationAccountId)) {
+                destinationToken = data.access_token;
+            }
+        });
+
+        if (!sourceToken || !destinationToken) {
+            throw new Error('Could not find access tokens for accounts');
+        }
+
+        // 1. Create transfer authorization
+        const authResponse = await plaidClient.transferAuthorizationCreate({
+            access_token: sourceToken,
+            account_id: sourceAccountId,
+            type: 'debit',  // Taking money from source account
+            network: 'ach',
+            amount: amount.toString(),
+            ach_class: 'ppd',
+            user: {
+                legal_name: 'Ease.Cash User'  // We might want to get actual user name
+            }
+        });
+
+        if (authResponse.data.authorization.decision !== 'approved') {
+            throw new Error(`Transfer authorization not approved: ${authResponse.data.authorization.decision}`);
+        }
+
+        // 2. Create the transfer with authorization
+        const transferResponse = await plaidClient.transferCreate({
+            access_token: sourceToken,
+            account_id: sourceAccountId,
+            authorization_id: authResponse.data.authorization.id,  // Add authorization ID
+            type: 'debit',
+            network: 'ach',
+            amount: amount.toString(),
+            description: 'Ease.Cash Round-up Transfer',
+            ach_class: 'ppd',
+            user: {
+                legal_name: 'Ease.Cash User'
+            }
+        });
+
+        // Store transfer details in Firestore
+        await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('transfers')
+            .add({
+                transfer_id: transferResponse.data.transfer.id,
+                source_account_id: sourceAccountId,
+                destination_account_id: destinationAccountId,
+                amount: amount,
+                status: transferResponse.data.transfer.status,
+                created_at: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+        res.json({
+            success: true,
+            transfer_id: transferResponse.data.transfer.id,
+            status: transferResponse.data.transfer.status,
+            authorization_id: authResponse.data.authorization.id  // Include auth ID in response
+        });
+
+    } catch (error) {
+        console.error('Transfer creation error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+  });
+
+  // Add webhook handler for transfer status updates
+  router.post('/webhook', async (req, res) => {
+    try {
+        const { webhook_type, webhook_code, transfer_id } = req.body;
+
+        if (webhook_type === 'TRANSFER' && transfer_id) {
+            // Get transfer details from Firestore
+            const transfersSnapshot = await admin.firestore()
+                .collectionGroup('transfers')
+                .where('transfer_id', '==', transfer_id)
+                .get();
+
+            if (!transfersSnapshot.empty) {
+                const transferDoc = transfersSnapshot.docs[0];
+                
+                // Update transfer status
+                await transferDoc.ref.update({
+                    status: webhook_code,
+                    updated_at: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Handle specific status updates
+                switch (webhook_code) {
+                    case 'TRANSFER_COMPLETED':
+                        console.log(`Transfer ${transfer_id} completed successfully`);
+                        break;
+                    case 'TRANSFER_FAILED':
+                        console.error(`Transfer ${transfer_id} failed`);
+                        // TODO: Implement retry logic or notify user
+                        break;
+                    case 'TRANSFER_CANCELED':
+                        console.log(`Transfer ${transfer_id} was canceled`);
+                        break;
+                }
+            }
+        }
+
+        res.json({ received: true });
+
+    } catch (error) {
+        console.error('Webhook handling error:', error);
         res.status(500).json({ error: error.message });
     }
   });
