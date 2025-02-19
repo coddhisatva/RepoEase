@@ -177,6 +177,43 @@ function initializeDashboard() {
     });
   }
 
+  // Add liabilities test button handler
+  const testLiabilitiesButton = document.getElementById('test-liabilities');
+  if (testLiabilitiesButton) {
+    console.log('Test liabilities button found, adding click listener');
+    testLiabilitiesButton.addEventListener('click', async () => {
+      try {
+        // Get current user's plaidItems
+        const plaidItemsSnapshot = await getDocs(
+          collection(db, 'users', auth.currentUser.uid, 'plaidItems')
+        );
+
+        if (plaidItemsSnapshot.empty) {
+          console.error('No Plaid items found');
+          return;
+        }
+
+        // Use the first plaidItem's access token
+        const plaidItem = plaidItemsSnapshot.docs[0].data();
+        
+        const response = await fetch('http://localhost:3000/api/plaid/get_liabilities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            access_token: plaidItem.encrypted_access_token
+          })
+        });
+        
+        const data = await response.json();
+        console.log('Liabilities data:', data);
+      } catch (error) {
+        console.error('Error testing liabilities:', error);
+      }
+    });
+  }
+
   console.log('Dashboard script loaded. User should be signed in if they’re here.');
 }
 

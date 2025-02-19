@@ -1,4 +1,6 @@
-const { plaidClient } = require('../config/plaidConfig');
+const admin = require('firebase-admin');
+const { FieldValue } = require('firebase-admin/firestore');
+const { plaidClient } = require('./plaidConfig');
 
 async function processDailyRoundups(userId, transactions, startDate, endDate, stripe, admin) {
     try {

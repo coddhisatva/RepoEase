@@ -54,3 +54,6 @@ Each connection is stored in Firestore with:
   - Account types
   - Account purposes (source/destination)
   - Account masks (last 4 digits)
+
+
+  A proof-of-concept for an automated student loan payment platform. Development was completed through sandbox testing phase, at which point regulatory research revealed conflicts with the DOE STOP Act of 2020. This repository represents the completed technical validation phase.

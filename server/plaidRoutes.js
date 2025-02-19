@@ -91,8 +91,7 @@ router.post('/create_link_token', async (req, res) => {
         const response = await plaidClient.linkTokenCreate({
             user: { client_user_id: user_id },
             client_name: 'Ease.Cash',
-            products: ['transactions', 'auth'],
-            optional_products: ['liabilities'],
+            products: ['transactions', 'auth', 'liabilities'],
             country_codes: ['US'],
             language: 'en'
         });
@@ -760,6 +759,29 @@ router.post('/create_link_token', async (req, res) => {
     } catch (error) {
         console.error('Webhook handling error:', error);
         res.status(500).json({ error: error.message });
+    }
+  });
+
+  router.post('/get_liabilities', async (req, res) => {
+    try {
+        const { access_token } = req.body;
+        
+        const liabilitiesResponse = await plaidClient.liabilitiesGet({
+            access_token: access_token
+        });
+
+        console.log('Liabilities data:', JSON.stringify(liabilitiesResponse.data, null, 2));
+        
+        return res.json({
+            success: true,
+            liabilities: liabilitiesResponse.data
+        });
+    } catch (error) {
+        console.error('Error fetching liabilities:', error);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
   });
 

@@ -7,7 +7,9 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 exports.processEndOfDay = onSchedule({
     schedule: '59 23 * * *',
     timeZone: 'America/Los_Angeles',
-    retryCount: 3
+    retryCount: 3,
+    timeoutSeconds: 540,
+    minInstances: 0
 }, async (event) => {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
@@ -16,7 +18,15 @@ exports.processEndOfDay = onSchedule({
     startDate.setDate(startDate.getDate() - 1);
 
     try {
-        const result = await processDailyRoundups(startDate, endDate, stripe);
+        // Get all pending transactions
+        const pendingTransactions = await admin.firestore()
+            .collectionGroup('transactions')
+            .where('round_up_status', '==', 'pending')
+            .where('created_at', '>=', startDate)
+            .where('created_at', '<=', endDate)
+            .get();
+
+        const result = await processDailyRoundups('test-user-123', pendingTransactions.docs, startDate, endDate, stripe, admin);
         console.log('End-of-day processing complete:', result);
         return null;
     } catch (error) {
