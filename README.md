@@ -1,59 +1,55 @@
-# RepoEase
-Ease Repository 0.2
+# Ease.Cash
 
-# For frontend (in first terminal):
+A proof-of-concept for an automated student loan payment platform. Development was completed through sandbox testing phase, at which point regulatory research revealed conflicts with the DOE STOP Act of 2020. This repository represents the completed technical validation phase.
+
+## How It Works
+The platform automatically rounds up users' daily transactions (e.g., $4.30 becomes $5.00) and accumulates these micro-savings. At the end of each day, accumulated funds are first applied to the monthly subscription fee, with remaining amounts automatically directed to users' student loan accounts.
+
+## Technical Overview
+
+Ease.Cash demonstrates complex integration of multiple financial services APIs to create a seamless automated payment system:
+
+### Core Architecture
+- Backend: Node.js with Express
+- Authentication & Database: Firebase
+- Banking Integration: Plaid API
+- Payment Processing: Stripe API
+- Frontend: Vanilla JavaScript (planned React migration)
+
+### Key Features
+- Real-time transaction monitoring
+- Automated round-up calculations
+- Secure bank account linking
+- Multi-account support
+- Batched end-of-day processing
+- Subscription fee management
+- Automated student loan payments
+
+### Technical Highlights
+- Secure credential management
+- Comprehensive error handling
+- Transaction atomicity
+- Automated testing infrastructure
+- Sandbox environment configuration
+- Cloud function scheduling
+- Collection group queries for efficient data access
+
+## Development Status
+Development concluded at sandbox testing phase after thorough technical validation. The codebase demonstrates successful integration of complex financial systems while maintaining security and scalability standards.
+
+## Local Development
+```bash
+# Frontend
 npx webpack --watch
 
-# In a second terminal, for local, run one of these:
+# Development Server
 npx live-server public
 # or
 npx http-server public
-# or, for web hosting:
-firebase deploy
 
-# For backend (in a third terminal):
+# Backend
 node server/server.js
+```
 
-Firebase UI Email Enumeration:
--https://github.com/firebase/firebaseui-web/issues/1040
--In order to allow sign in with Firebase UI post Sep 2023, you have to disable email eumeration.
---This is a security risk as it exposes user emails.
---No fix as of now, >1year later. Have they abandoned FirebaseUI?
-It would be advantageous to get to know someone on a Firebase team.
--headquarters: 22 4th Street, San Francisco.
-
-I think we should change from FirebaseUI to Clerk, and use next.js (React framework).
-
-Tailwind -- recd by Will
-ChadCm -- Ui component library recd by will
-InstantDb (to be aware of)-- database acts like a web socket (instantaneous updates), recd by Will -- cached locally
-
-## Bank Account Linking
-
-### Behavior
-- Users can link multiple bank accounts through Plaid
-- Each connection can include checking accounts, credit cards, and/or student loan accounts, etc
-- Student loan accounts are tagged as 'destination' (for payments)
-- All else are tagged as 'source' (for round-ups)
-- Users can:
-  - Connect multiple accounts from the same bank
-  - Connect accounts from different banks
-  - Add student loan accounts at any time (not required immediately)
-
-### Duplicate Prevention
-- Cannot link the same account type from the same institution twice
-- Can link different account types from the same institution
-- Can link same account types from different institutions
-
-### Data Storage
-Each connection is stored in Firestore with:
-- Encrypted access token
-- Institution ID
-- Account details including:
-  - Account IDs
-  - Account types
-  - Account purposes (source/destination)
-  - Account masks (last 4 digits)
-
-
-  A proof-of-concept for an automated student loan payment platform. Development was completed through sandbox testing phase, at which point regulatory research revealed conflicts with the DOE STOP Act of 2020. This repository represents the completed technical validation phase.
+## License
+All rights reserved.
